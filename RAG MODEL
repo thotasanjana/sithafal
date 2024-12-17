@@ -1,0 +1,146 @@
+Step 1: Data Ingestion
+
+Importing Libraries
+
+Python
+
+import requests
+from bs4 import BeautifulSoup
+from sentence_transformers import SentenceTransformer
+import numpy as np
+import faiss
+Requests: Used to make HTTP requests to fetch the content of web pages.
+
+BeautifulSoup: A library for parsing HTML and extracting data from web pages.
+
+Sentence Transformer: A library to generate embeddings from text using pre-trained models.
+
+numpy: A library for numerical operations.
+
+faiss: A library for efficient similarity search and clustering of dense vectors.
+
+Crawling and Scraping Content
+
+Python
+
+def crawl_and_scrape(url):
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, 'html.parser')
+    texts = soup.find_all(text=True)
+    return ''.join(texts)
+crawl_and_scrape(url): This function takes a URL, fetches its content, parses the HTML, and extracts all text. The text is then joined into a single string.
+
+Segmenting Content into Chunks
+
+Python
+
+def segment_content(content, chunk_size=100):
+    words = content.split()
+    chunks = [''.join(words[i:i+chunk_size]) for i in range(0, len(words), chunk_size)]
+    return chunks
+segment_content(content, chunk_size=100): This function splits the content into smaller chunks of a specified size (default is 100 words). This helps in managing large texts and improves the granularity of the embeddings.
+
+Let me know if you would like any further assistance or have any other questions!
+
+
+
+
+
+
+extract text from the image
+
+
+
+Here is the text extracted from the image:
+
+Converting Chunks into Vector Embeddings
+
+Python
+
+def convert_to_embeddings(chunks, model):
+    embeddings = model.encode(chunks)
+    return embeddings
+convert_to_embeddings(chunks, model): This function takes the text chunks and converts them into vector embeddings using a pre-trained model from the Sentence Transformer library.
+Storing Embeddings in a Vector Database
+
+Python
+
+def store_embeddings(embeddings, metadata):
+    dimension = embeddings.shape[1]
+    index = faiss.IndexFlatL2(dimension)
+    index.add(embeddings)
+    return index
+store_embeddings(embeddings, metadata): This function stores the embeddings in a FAISS index for efficient similarity search. The embeddings are added to the index, which is used later for querying.
+
+
+
+
+
+extract text from the image
+
+
+
+Here is the text extracted from the image:
+
+Main Function to Process URLs
+
+Python
+
+def process_urls(urls):
+    model = SentenceTransformer('all-MiniLM-L6-v2')
+    all_embeddings = []
+    all_metadata = []
+
+    for url in urls:
+        content = crawl_and_scrape(url)
+        chunks = segment_content(content)
+        embeddings = convert_to_embeddings(chunks, model)
+        all_embeddings.append(embeddings)
+        all_metadata.extend([{'url': url, 'chunk': chunk} for chunk in chunks])
+
+    all_embeddings = np.vstack(all_embeddings)
+    index = store_embeddings(all_embeddings, all_metadata)
+
+    return index, all_metadata
+process_urls(urls): This function orchestrates the entire data ingestion process. It initializes the embedding model, processes each URL to extract and segment content, converts the segments into embeddings, and stores them in the FAISS index. It also maintains metadata for each chunk.
+
+
+
+
+
+extract text from the image
+
+
+
+
+Here is the text extracted from the image:
+
+Step 2: Query Handling
+
+Handling User Queries
+
+Python
+
+def query_handling(query, model, index, metadata):
+    query_embedding = model.encode([query])
+    D, I = index.search(query_embedding, k=5)  # Retrieve top 5 relevant chunks
+    relevant_chunks = [metadata[i]['chunk'] for i in I[0]]
+    return relevant_chunks
+query_handling(query, model, index, metadata): This function converts the user's query into an embedding, performs a similarity search in the FAISS index, and retrieves the top 5 most relevant chunks based on the similarity scores.
+
+
+Step 3: Response Generation
+
+Generating Responses
+
+Python
+
+from transformers import pipeline
+
+def generate_response(query, relevant_chunks):
+    generator = pipeline('text-generation', model='gpt-3.5-turbo')
+    context = '\n'.join(relevant_chunks)
+    prompt = f"Context: {context}\n\nQuestion: {query}\n\nAnswer:"
+    response = generator(prompt, max_length=200)
+    return response[0]['generated_text']
+generate_response(query, relevant_chunks): This function uses a language model (e.g., GPT-3.5-turbo) to generate a response. It constructs a prompt that includes the relevant chunks as context and the user's query. The language model generates a detailed response based on this prompt.
